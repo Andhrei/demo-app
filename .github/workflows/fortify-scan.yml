@@ -87,74 +87,78 @@ jobs:
       # Create AppVersion
       - name: Create Application Version
         run: |
+          # Check if target AppVersion exists
           appVersionSearch=$(fcli ssc appversion ls -q=application.name="$APPLICATION" -q=name="${VERSION}")
-
+          
           if [[ $appVersionSearch = "No data" ]]; then
-            echo "Application Version $APPLICATION:$VERSION not found. Creation init";
+            # Target AppVersion does not exists. Creation start
+              echo "Application Version $APPLICATION:$VERSION not found. Creation init";
           
-            echo "Retrieving Application ID"
-            projectId=$(fcli ssc app get "${APPLICATION}" -o expr={id})
-            echo "ApplicationId = $projectId"
+              echo "Retrieving Application ID"
+              projectId=$(fcli ssc app get "${APPLICATION}" -o expr={id})
+              echo "ApplicationId = $projectId"
           
-            echo "Creating Application Version"
-            body="{
-                \"name\": \"$VERSION\",
-                \"description\": \"\",
-                \"active\": true,
-                \"committed\": false,
-                \"project\": {
-                    \"id\": $projectId
-                }
-            }"
+              echo "Creating Application Version"
+              body="{\"name\": \"$VERSION\",\"description\": \"\",\"active\": true,\"committed\": false,\"project\": {\"id\": $projectId}}"
+              applicationVersionId=$(fcli ssc rest call /api/v1/projectVersions -d "$body" -X POST -o expr={data.id} --store ${SHA}_appVersionId)
+              status=$(fcli config var contents get ${SHA}_appVersionId -o expr={responseCode})
           
-            applicationVersionId=$(fcli ssc rest call /api/v1/projectVersions -d "$body" -X POST -o expr={data.id})
-            echo "Application Version created with id $applicationVersionId"
+              if (($status >= 200 && $status < 300)) ; then
+                echo "Application Version created with id $applicationVersionId [code= $status]"
           
-            echo "Copy Application State from \"$APPLICATION\":$VERSION to \"$APPLICATION_FROM\":$VERSION_FROM "
-            echo "Searching for \"$APPLICATION_FROM\":$VERSION_FROM"
-          
-            appVersionSearch=$(fcli ssc appversion ls -q=application.name="${APPLICATION_FROM}" -q=name="${VERSION_FROM}")
-            if [[ $appVersionSearch = "No data" ]]; then
+                # Copy State phase start
+                echo "Copy Application State from \"$APPLICATION\":$VERSION to \"$APPLICATION_FROM\":$VERSION_FROM "
+                ## Searching for Source App Version
+                echo "Searching for \"$APPLICATION_FROM\":$VERSION_FROM"
+                appVersionSearch=$(fcli ssc appversion ls -q=application.name="${APPLICATION_FROM}" -q=name="${VERSION_FROM}")
+                if [[ $appVersionSearch = "No data" ]]; then
+                  ## Source App Version not found. Skipping
                   echo "Application Version $APPLICATION_FROM:$VERSION_FROM not found. Skipping Copy State";
-            else
-              echo "Application Version $APPLICATION_FROM:$VERSION_FROM found"
-              fromApplicationVersionId=$(fcli ssc appversion get "$APPLICATION_FROM":$VERSION_FROM -o expr={id})
-              echo "Application Version $APPLICATION_FROM:$VERSION_FROM id: $fromApplicationVersionId"
+                else
+                  ## Source App Version found. Copying
+                  echo "Application Version $APPLICATION_FROM:$VERSION_FROM found"
+                  fromApplicationVersionId=$(fcli ssc appversion get "$APPLICATION_FROM":$VERSION_FROM -o expr={id})
+                  echo "Application Version $APPLICATION_FROM:$VERSION_FROM id: $fromApplicationVersionId"
           
-              echo "Copy State init"
-              body="{
-                      \"copyAnalysisProcessingRules\": \"true\",
-                      \"copyBugTrackerConfiguration\": \"true\",
-                      \"copyCustomTags\": \"true\",
-                      \"previousProjectVersionId\": \"$fromApplicationVersionId\",
-                      \"projectVersionId\": \"$applicationVersionId\"
-                    }"
-              status=$(fcli ssc rest call /api/v1/projectVersions/action/copyFromPartial -d "$body" -X POST -o expr={responseCode})
+                  echo "Copy State execution"
+                  body="{\"copyAnalysisProcessingRules\": \"true\",\"copyBugTrackerConfiguration\": \"true\",\"copyCustomTags\": \"true\",
+                          \"previousProjectVersionId\": \"$fromApplicationVersionId\",\"projectVersionId\": \"$applicationVersionId\"}"
+                  status=$(fcli ssc rest call /api/v1/projectVersions/action/copyFromPartial -d "$body" -X POST -o expr={responseCode})
+                fi
           
-              if [[ $status = 200 ]] ; then
-                echo "Copy State SUCCESS. Commiting Application Version"
-                body='{"committed": "true"}'
-                status=$(fcli ssc rest call /api/v1/projectVersions/$applicationVersionId -d "$body" -X PUT -o expr={responseCode})
-                if [[ $status = 200 ]] ; then
-                        echo "Application Version commited."
+                if (($status >= 200 && $status < 300)); then
+                  echo "Copy State SUCCESS or SKIPPED [code= $status]"
+                  ## Commiting after successful or skipped copy state
+                  echo "Commiting Application Version"
+                  body='{"committed": "true"}'
+                  status=$(fcli ssc rest call /api/v1/projectVersions/$applicationVersionId -d "$body" -X PUT -o expr={responseCode})
+          
+                  if (($status >= 200 && $status < 300)) ; then
+                    echo "Application Version commited. [code= $status]"
+                  else
+                    echo $status
+                    echo "ERROR: Application Version commit FAILURE. Deleting Application Version"
+                  fi
                 else
                   echo $status
-                  echo "Something went wrong while commiting Application Version"
+                  echo "Copy State FAILURE. Deleting Application Version"
                 fi
-              fi
-              if [[ $status != 200 ]]; then
+          
+                if (($status < 200 || $status >= 300)); then
+                  echo "Deleting Application"
+                  status=$(fcli ssc rest call /api/v1/projectVersions/$applicationVersionId -X DELETE -o expr={responseCode})
+                  if (($status >= 200 && $status < 300)) ; then
+                    echo "Application Version deleted. [code= $status]"
+                  else
+                    echo $status
+                    echo "Something went wrong while deleting Application Version"
+                  fi
+                  exit 1
+                fi
+              else
                 echo $status
-                echo "Copy State FAILURE. Deleting Application"
-                status=$(fcli ssc rest call /api/v1/projectVersions/$applicationVersionId -X DELETE -o expr={responseCode})
-                if [[ $status = 200 ]] ; then
-                  echo "Application Version deleted."
-                else
-                  echo $status
-                  echo "Something went wrong while deleting Application Version"
-                fi
-                exit 1
+                echo "ERROR: Application Version Creation FAILURE"
               fi
-            fi
           else
             echo "Application Version \"$APPLICATION\":$VERSION already exists. Skipping";
           fi
