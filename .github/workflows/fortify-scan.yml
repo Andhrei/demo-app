@@ -43,7 +43,7 @@ jobs:
       IQ_USERNAME: ${{ secrets.IQ_USERNAME }}
       IQ_PASSWORD: ${{ secrets.IQ_PASSWORD }}
       IQ_APP: "demoapp_gh"
-      IQ_STAGE: "develop"
+      IQ_STAGE: "build"
       IQ_BUILD_OPTS: ""
 #      IQ_BUILD_OPTS: "mvn dependency:copy-dependencies"
       IQ_TARGET: "pom.xml"
@@ -124,7 +124,6 @@ jobs:
           
                   echo "Copy State execution"
                   body="{\"copyAnalysisProcessingRules\": \"true\",\"copyBugTrackerConfiguration\": \"true\",\"copyCustomTags\": \"true\",\"previousProjectVersionId\": \"$fromApplicationVersionId\",\"projectVersionId\": \"$applicationVersionId\"}"
-                  echo $body
                   status=$(fcli ssc rest call /api/v1/projectVersions/action/copyFromPartial -d "$body" -X POST -o expr={responseCode})
                 fi
           
