@@ -129,7 +129,7 @@ jobs:
       - name: Cleanup
         if: always()
         run: |
-          fcli config var def rm $SHA_sastscan
+          fcli config var def rm ${SHA}_sastscan
           fcli sc-sast session logout --no-revoke-token
           fcli ssc session logout --no-revoke-token
 
