@@ -11,6 +11,7 @@
 		<java.version>19</java.version>
 		<maven.compiler.source>1.8</maven.compiler.source>
 		<maven.compiler.target>1.8</maven.compiler.target>
+		<h2database.version>1.4.200</h2database.version>
 	</properties>
 	<dependencies>
 		<dependency>
