@@ -83,7 +83,7 @@ jobs:
       # Login
       - name: Login to Fortify
         run: |
-          fcli ssc session login --url $FTFY_SSC_URL -u $FTFY_CI_USERNAME -p $FTFY_CI_USERNAME
+          fcli ssc session login --url $FTFY_SSC_URL -u $FTFY_CI_USERNAME -p $FTFY_CI_PASSWORD
           fcli sc-sast session login --ssc-url $FTFY_SSC_URL -t $FTFY_CI_TOKEN_DEC -c $FTFY_SC_CLIENT_AUTH_TOKEN
 
       # Create AppVersion
