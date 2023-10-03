@@ -13,6 +13,7 @@ jobs:
   Fortify-SAST:
     # Use the appropriate runner for building your source code
     runs-on: ubuntu-latest 
+    environment: fortify
     permissions:
       # required for all workflows
       security-events: write
