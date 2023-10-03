@@ -107,7 +107,7 @@ jobs:
                 echo "Application Version created with id $applicationVersionId [code= $status]"
           
                 # Copy State phase start
-                echo "Copy Application State from \"$APPLICATION\":$VERSION to \"$APPLICATION_FROM\":$VERSION_FROM "
+                echo "Copy Application State from \"$APPLICATION_FROM\":$VERSION_FROM to \"$APPLICATION\":$VERSION"
                 ## Searching for Source App Version
                 echo "Searching for \"$APPLICATION_FROM\":$VERSION_FROM"
                 appVersionSearch=$(fcli ssc appversion ls -q=application.name="${APPLICATION_FROM}" -q=name="${VERSION_FROM}")
@@ -121,8 +121,8 @@ jobs:
                   echo "Application Version $APPLICATION_FROM:$VERSION_FROM id: $fromApplicationVersionId"
           
                   echo "Copy State execution"
-                  body="{\"copyAnalysisProcessingRules\": \"true\",\"copyBugTrackerConfiguration\": \"true\",\"copyCustomTags\": \"true\",
-                          \"previousProjectVersionId\": \"$fromApplicationVersionId\",\"projectVersionId\": \"$applicationVersionId\"}"
+                  body="{\"copyAnalysisProcessingRules\": \"true\",\"copyBugTrackerConfiguration\": \"true\",\"copyCustomTags\": \"true\",\"previousProjectVersionId\": \"$fromApplicationVersionId\",\"projectVersionId\": \"$applicationVersionId\"}"
+                  echo $body
                   status=$(fcli ssc rest call /api/v1/projectVersions/action/copyFromPartial -d "$body" -X POST -o expr={responseCode})
                 fi
           
