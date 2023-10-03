@@ -44,9 +44,8 @@ jobs:
       IQ_PASSWORD: ${{ secrets.IQ_PASSWORD }}
       IQ_APP: "demoapp_gh"
       IQ_STAGE: "build"
-      IQ_BUILD_OPTS: ""
-#      IQ_BUILD_OPTS: "mvn dependency:copy-dependencies"
-      IQ_TARGET: "pom.xml"
+      IQ_BUILD_OPTS: "mvn dependency:copy-dependencies"
+      IQ_TARGET: "./target"
 
       SHA: "${{ github.run_id }}"
     steps:
